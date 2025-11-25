@@ -5,7 +5,6 @@ import datetime
 import threading
 import json
 import random
-import queue
 
 # ============================
 # OS INFO
@@ -220,22 +219,16 @@ def show_datetime():
     print("Date + Time:", now.strftime("%m/%d/%Y %H:%M:%S"))
 
 # ============================
-# RTTIME (Real-Time) Safe Version
+# RTTIME (Real-Time)
 # ============================
 RTTIME_ENABLED = False
-rttime_queue = queue.Queue()
 
-def rttime_loop_safe():
+def rttime_loop():
     while RTTIME_ENABLED:
         now = datetime.datetime.now().strftime("%H:%M:%S")
-        rttime_queue.put(now)
+        print(f"\r[RTTIME] {now}", end="")
         time.sleep(1)
-
-def rttime_display_safe():
-    while not rttime_queue.empty():
-        now = rttime_queue.get()
-        # Safe print without overwriting input
-        print(f"[RTTIME] {now}")
+    print("\r", end="")
 
 def toggle_rttime():
     global RTTIME_ENABLED
@@ -245,7 +238,7 @@ def toggle_rttime():
     else:
         print("⚠️ Warning: RTTIME uses PC performance even though it is small 💀")
         RTTIME_ENABLED = True
-        t = threading.Thread(target=rttime_loop_safe, daemon=True)
+        t = threading.Thread(target=rttime_loop, daemon=True)
         t.start()
 
 # ============================
@@ -460,8 +453,38 @@ def activate_os():
 # ============================
 def list_commands():
     cmds = [
-        "help, list, ver, renameos, date, time, datetime, rttime, bgm, app, notepad, open, dir, cd <dir>, mkdir <name>, pass, user, reboot, command",
-        "wifi-scan, wifi-connect, wifi-disconnect, wifi-status, ethernet-list, ethernet-connect, ethernet-status, speed-test, yuac, saveos, loados, activate, exit"
+        "help           - show help menu",
+        "list           - show all commands",
+        "ver            - show DOS version",
+        "renameos       - rename the OS (locked if not activated)",
+        "date           - show date",
+        "time           - show time",
+        "datetime       - date + time",
+        "rttime         - toggle real-time clock (warning: uses CPU)",
+        "bgm            - toggle quiet background loop to avoid auto-off",
+        "app            - launch fake app",
+        "notepad        - write file (locked if not activated)",
+        "open           - open file",
+        "dir            - list folder",
+        "cd <dir>       - change folder",
+        "mkdir <name>   - make folder (locked if not activated)",
+        "pass           - change password",
+        "user           - switch user",
+        "reboot         - reboot Youmu DOS / nuclear delete",
+        "command        - run multiple commands separated by ;",
+        "wifi-scan      - show available Wi-Fi networks with type/strength",
+        "wifi-connect   - connect to a Wi-Fi network (locked if not activated)",
+        "wifi-disconnect- disconnect current Wi-Fi",
+        "wifi-status    - show current connected Wi-Fi",
+        "ethernet-list   - list available Ethernet networks",
+        "ethernet-connect- connect to Ethernet network",
+        "ethernet-status - show connected Ethernet",
+        "speed-test      - test current network speed",
+        "yuac           - toggle YUAC",
+        "saveos         - save current OS state",
+        "loados         - load saved OS state",
+        "activate       - activate the OS with a key",
+        "exit           - shutdown Youmu DOS"
     ]
     print("\nAll commands:\n")
     for c in cmds:
@@ -478,7 +501,6 @@ def show_version():
 # EXECUTE COMMAND
 # ============================
 def execute(cmd):
-    rttime_display_safe()  # show safe RTTIME updates
     c = cmd.strip().split()
     if not c:
         return
@@ -490,108 +512,104 @@ def execute(cmd):
         print("Command locked! Activate OS to use 💀\n")
         return
 
-    try:
-        if c0 == "help" or c0 == "list":
-            list_commands()
-        elif c0 == "ver":
-            show_version()
-        elif c0 == "renameos":
-            rename_os()
-        elif c0 == "date":
-            show_date()
-        elif c0 == "time":
-            show_time()
-        elif c0 == "datetime":
-            show_datetime()
-        elif c0 == "rttime":
-            toggle_rttime()
-        elif c0 == "bgm":
-            toggle_bgm()
-        elif c0 == "app":
-            fake_app()
-        elif c0 == "notepad":
-            notepad()
-        elif c0 == "open":
-            open_file()
-        elif c0 == "dir":
-            dir_cmd()
-        elif c0 == "cd":
-            if len(c) > 1:
-                cd_cmd(c[1])
-            else:
-                print("Specify folder name 💀")
-        elif c0 == "mkdir":
-            if len(c) > 1:
-                mkdir_cmd(c[1])
-            else:
-                print("Specify folder name 💀")
-        elif c0 == "pass":
-            change_pass()
-        elif c0 == "user":
-            switch_user()
-        elif c0 == "reboot":
-            if yuac_prompt("reboot"):
-                choice = input("Delete all code/data and paste new OS? (y/N): ").strip().lower()
-                if choice == "y":
-                    confirm = input("⚠️ Type 'CONFIRM' to delete EVERYTHING: ").strip()
-                    if confirm == "CONFIRM":
-                        try: os.remove(SAVE_FILE)
-                        except: pass
-                        os.system("cls" if os.name == "nt" else "clear")
-                        print("All code/data wiped! Paste new OS now 💀")
-                        sys.exit()
-                    else:
-                        print("Reboot aborted 💀")
-                else:
-                    os.system("cls" if os.name == "nt" else "clear")
-                    boot_screen()
-        elif c0 == "command":
-            rest = cmd[len("command"):].strip()
-            cmds = rest.split(";")
-            for cm in cmds:
-                execute(cm.strip())
-        elif c0 == "wifi-scan":
-            wifi_scan()
-        elif c0 == "wifi-connect":
-            if yuac_prompt("wifi-connect"):
-                wifi_connect()
-        elif c0 == "wifi-disconnect":
-            wifi_disconnect()
-        elif c0 == "wifi-status":
-            wifi_status()
-        elif c0 == "ethernet-list":
-            ethernet_list()
-        elif c0 == "ethernet-connect":
-            if yuac_prompt("ethernet-connect"):
-                ethernet_connect()
-        elif c0 == "ethernet-status":
-            ethernet_status()
-        elif c0 == "speed-test":
-            speed_test()
-        elif c0 == "yuac":
-            global YUAC_ENABLED
-            YUAC_ENABLED = not YUAC_ENABLED
-            print(f"YUAC {'enabled' if YUAC_ENABLED else 'disabled'} 💀")
-        elif c0 == "saveos":
-            save_os()
-        elif c0 == "loados":
-            load_os()
-        elif c0 == "activate":
-            activate_os()
-        elif c0 == "exit":
-            print("Shutting down Youmu DOS 💀")
-            sys.exit()
+    if c0 == "help" or c0 == "list":
+        list_commands()
+    elif c0 == "ver":
+        show_version()
+    elif c0 == "renameos":
+        rename_os()
+    elif c0 == "date":
+        show_date()
+    elif c0 == "time":
+        show_time()
+    elif c0 == "datetime":
+        show_datetime()
+    elif c0 == "rttime":
+        toggle_rttime()
+    elif c0 == "bgm":
+        toggle_bgm()
+    elif c0 == "app":
+        fake_app()
+    elif c0 == "notepad":
+        notepad()
+    elif c0 == "open":
+        open_file()
+    elif c0 == "dir":
+        dir_cmd()
+    elif c0 == "cd":
+        if len(c) > 1:
+            cd_cmd(c[1])
         else:
-            print("Unknown command bro 💀")
-    except Exception as e:
-        print("Error executing command:", e)
+            print("Specify folder name 💀")
+    elif c0 == "mkdir":
+        if len(c) > 1:
+            mkdir_cmd(c[1])
+        else:
+            print("Specify folder name 💀")
+    elif c0 == "pass":
+        change_pass()
+    elif c0 == "user":
+        switch_user()
+    elif c0 == "reboot":
+        if yuac_prompt("reboot"):
+            choice = input("Delete all code/data and paste new OS? (y/N): ").strip().lower()
+            if choice == "y":
+                confirm = input("⚠️ Type 'CONFIRM' to delete EVERYTHING: ").strip()
+                if confirm == "CONFIRM":
+                    try: os.remove(SAVE_FILE)
+                    except: pass
+                    os.system("cls" if os.name == "nt" else "clear")
+                    print("All code/data wiped! Paste new OS now 💀")
+                    sys.exit()
+                else:
+                    print("Reboot aborted 💀")
+            else:
+                os.system("cls" if os.name == "nt" else "clear")
+                boot_screen()
+    elif c0 == "command":
+        rest = cmd[len("command"):].strip()
+        cmds = rest.split(";")
+        for cm in cmds:
+            execute(cm.strip())
+    elif c0 == "wifi-scan":
+        wifi_scan()
+    elif c0 == "wifi-connect":
+        if yuac_prompt("wifi-connect"):
+            wifi_connect()
+    elif c0 == "wifi-disconnect":
+        wifi_disconnect()
+    elif c0 == "wifi-status":
+        wifi_status()
+    elif c0 == "ethernet-list":
+        ethernet_list()
+    elif c0 == "ethernet-connect":
+        if yuac_prompt("ethernet-connect"):
+            ethernet_connect()
+    elif c0 == "ethernet-status":
+        ethernet_status()
+    elif c0 == "speed-test":
+        speed_test()
+    elif c0 == "yuac":
+        global YUAC_ENABLED
+        YUAC_ENABLED = not YUAC_ENABLED
+        print(f"YUAC {'enabled' if YUAC_ENABLED else 'disabled'} 💀")
+    elif c0 == "saveos":
+        save_os()
+    elif c0 == "loados":
+        load_os()
+    elif c0 == "activate":
+        activate_os()
+    elif c0 == "exit":
+        print("Shutting down Youmu DOS 💀")
+        sys.exit()
+    else:
+        print("Unknown command bro 💀")
 
 # ============================
 # MAIN LOOP
 # ============================
 def main_loop():
     while True:
-        rttime_display_safe()
         user_input = input(f"{path_str()}> ")
         execute(user_input)
 
@@ -603,6 +621,4 @@ boot_screen()
 load_os()
 login()
 main_loop()
-
-
 
