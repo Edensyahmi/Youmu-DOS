@@ -4,6 +4,7 @@ import time
 import datetime
 import threading
 import json
+import random
 
 # ============================
 # OS INFO
@@ -24,14 +25,27 @@ fs = {"root": {}}
 current_path = ["root"]
 
 # ============================
-# NETWORKING (Wi-Fi only)
+# NETWORKING (Wi-Fi + Ethernet)
 # ============================
 wifi_networks = [
-    {"ssid": "TouhouNet", "type": "6", "strength": 95},
-    {"ssid": "Gensokyo-Guest", "type": "5", "strength": 70},
-    {"ssid": "SpiritLink", "type": "6E", "strength": 40}
+    {"ssid": "TouhouNet", "type": "5G", "strength": 95},
+    {"ssid": "Gensokyo-Guest", "type": "6G", "strength": 70},
+    {"ssid": "SpiritLink", "type": "7G", "strength": 40},
+    {"ssid": "Moon Network", "type": "7G", "strength": 100},
 ]
+
+wifi_free_inactive = [
+    {"ssid": "TouhouNet-2.4G", "type": "2.4G", "strength": 25},
+    {"ssid": "Gensokyo-Guest-2.4G", "type": "2.4G", "strength": 20},
+]
+
+ethernet_networks = [
+    {"name": "EtherNet-Local", "speed": "1 Gbps"},
+    {"name": "Moon LAN", "speed": "100 Tbps"},
+]
+
 connected_ssid = None
+connected_ethernet = None
 
 # ============================
 # YUAC (Youmu User Account Control)
@@ -55,6 +69,7 @@ def save_os():
         "current_user": current_user,
         "current_path": current_path,
         "connected_ssid": connected_ssid,
+        "connected_ethernet": connected_ethernet,
         "YUAC_ENABLED": YUAC_ENABLED,
         "OS_NAME": OS_NAME,
         "RTTIME_ENABLED": RTTIME_ENABLED,
@@ -66,8 +81,9 @@ def save_os():
     print("OS state saved 💀")
 
 def load_os():
-    global fs, users, current_user, current_path, connected_ssid
-    global YUAC_ENABLED, OS_NAME, RTTIME_ENABLED, BGM_ENABLED, OS_ACTIVATED
+    global fs, users, current_user, current_path
+    global connected_ssid, connected_ethernet, YUAC_ENABLED
+    global OS_NAME, RTTIME_ENABLED, BGM_ENABLED, OS_ACTIVATED
     try:
         with open(SAVE_FILE, "r") as f:
             state = json.load(f)
@@ -76,6 +92,7 @@ def load_os():
         current_user = state.get("current_user", None)
         current_path = state.get("current_path", ["root"])
         connected_ssid = state.get("connected_ssid", None)
+        connected_ethernet = state.get("connected_ethernet", None)
         YUAC_ENABLED = state.get("YUAC_ENABLED", True)
         OS_NAME = state.get("OS_NAME", "Youmu DOS")
         RTTIME_ENABLED = state.get("RTTIME_ENABLED", False)
@@ -136,27 +153,8 @@ def snake_animation():
             ~-_           _-~          ~-_       _-~
                ~--______-~                ~-___-~
         """,
-        r"""
-         /^\/^\
-       _|__|  O|
-\/     /~     \_/ \
- \____|__________/  \
-        \_______      \
-                `\     \                 \
-                  |     |                  \
-                 /      /                    \
-                /     /                       \
-              /      /                         \ \
-             /     /                            \  \
-           /     /             _----_            \   \
-          /     /           _-~      ~-_         |   |
-         (      (        _-~    _--_    ~-_     _/   |
-          \      ~-____-~    _-~    ~-_    ~-_-~    /
-            ~-_           _-~          ~-_       _-~
-               ~--______-~                ~-___-~
-        """
     ]
-    for i in range(3):
+    for i in range(2):
         for f in frames:
             os.system("cls" if os.name == "nt" else "clear")
             print(f)
@@ -334,7 +332,10 @@ def fake_app():
 def wifi_scan():
     print("Scanning for Wi-Fi networks...")
     time.sleep(1)
-    for i, net in enumerate(wifi_networks, 1):
+    networks = wifi_networks.copy()
+    if not OS_ACTIVATED:
+        networks += wifi_free_inactive
+    for i, net in enumerate(networks, 1):
         print(f"{i}. {net['ssid']} - Type: {net['type']} - Strength: {net['strength']}%")
     print()
 
@@ -342,7 +343,7 @@ def wifi_connect():
     global connected_ssid
     wifi_scan()
     choice = input("Enter network name to connect: ").strip()
-    net = next((n for n in wifi_networks if n["ssid"] == choice), None)
+    net = next((n for n in wifi_networks + wifi_free_inactive if n["ssid"] == choice), None)
     if net:
         connected_ssid = net['ssid']
         print(f"Connected to {connected_ssid} ✅\n")
@@ -359,13 +360,63 @@ def wifi_disconnect():
 
 def wifi_status():
     if connected_ssid:
-        net = next((n for n in wifi_networks if n["ssid"] == connected_ssid), None)
+        net = next((n for n in wifi_networks + wifi_free_inactive if n["ssid"] == connected_ssid), None)
         if net:
             print(f"Connected to {net['ssid']} - Type: {net['type']} - Strength: {net['strength']}%")
         else:
             print(f"Connected to {connected_ssid} (unknown type/strength)")
     else:
         print("Not connected to any Wi-Fi bro 💀")
+
+# ============================
+# Ethernet NETWORKING
+# ============================
+def ethernet_list():
+    print("Available Ethernet networks:")
+    for i, net in enumerate(ethernet_networks, 1):
+        print(f"{i}. {net['name']} - Speed: {net['speed']}")
+    print()
+
+def ethernet_connect():
+    global connected_ethernet
+    ethernet_list()
+    choice = input("Enter Ethernet network name to connect: ").strip()
+    net = next((n for n in ethernet_networks if n["name"] == choice), None)
+    if net:
+        connected_ethernet = net['name']
+        print(f"Connected to Ethernet network {connected_ethernet} ✅\n")
+    else:
+        print("Ethernet network not found bro 💀\n")
+
+def ethernet_status():
+    if connected_ethernet:
+        net = next((n for n in ethernet_networks if n["name"] == connected_ethernet), None)
+        if net:
+            print(f"Connected to {net['name']} - Speed: {net['speed']}")
+        else:
+            print(f"Connected to {connected_ethernet} (unknown speed)")
+    else:
+        print("Not connected to any Ethernet network bro 💀\n")
+
+# ============================
+# Speed Test
+# ============================
+def speed_test():
+    if connected_ssid:
+        net = next((n for n in wifi_networks + wifi_free_inactive if n["ssid"] == connected_ssid), None)
+        if net:
+            print(f"Testing Wi-Fi ({net['ssid']}) speed...")
+            time.sleep(1)
+            speed = random.randint(50, 100) if net['ssid'] != "Moon Network" else 100_000
+            print(f"Speed: {speed} Mbps 💀\n")
+    elif connected_ethernet:
+        net = next((n for n in ethernet_networks if n["name"] == connected_ethernet), None)
+        if net:
+            print(f"Testing Ethernet ({net['name']}) speed...")
+            time.sleep(1)
+            print(f"Speed: {net['speed']} 💀\n")
+    else:
+        print("Not connected to any network 💀\n")
 
 # ============================
 # OS RENAME
@@ -419,12 +470,16 @@ def list_commands():
         "mkdir <name>   - make folder (locked if not activated)",
         "pass           - change password",
         "user           - switch user",
-        "reboot         - reboot Youmu DOS",
+        "reboot         - reboot Youmu DOS / nuclear delete",
         "command        - run multiple commands separated by ;",
         "wifi-scan      - show available Wi-Fi networks with type/strength",
         "wifi-connect   - connect to a Wi-Fi network (locked if not activated)",
         "wifi-disconnect- disconnect current Wi-Fi",
         "wifi-status    - show current connected Wi-Fi",
+        "ethernet-list   - list available Ethernet networks",
+        "ethernet-connect- connect to Ethernet network",
+        "ethernet-status - show connected Ethernet",
+        "speed-test      - test current network speed",
         "yuac           - toggle YUAC",
         "saveos         - save current OS state",
         "loados         - load saved OS state",
@@ -454,12 +509,10 @@ def execute(cmd):
     restricted_cmds = ["mkdir", "notepad", "wifi-connect", "renameos"]
 
     if c0 in restricted_cmds and not OS_ACTIVATED:
-        print(f"Command '{c0}' locked! Activate OS to use 💀")
+        print("Command locked! Activate OS to use 💀\n")
         return
 
-    if c0 == "help":
-        list_commands()
-    elif c0 == "list":
+    if c0 == "help" or c0 == "list":
         list_commands()
     elif c0 == "ver":
         show_version()
@@ -478,31 +531,46 @@ def execute(cmd):
     elif c0 == "app":
         fake_app()
     elif c0 == "notepad":
-        if yuac_prompt("notepad"):
-            notepad()
+        notepad()
     elif c0 == "open":
         open_file()
     elif c0 == "dir":
         dir_cmd()
     elif c0 == "cd":
-        if len(c) > 1 and yuac_prompt(f"cd {c[1]}"):
+        if len(c) > 1:
             cd_cmd(c[1])
+        else:
+            print("Specify folder name 💀")
     elif c0 == "mkdir":
-        if len(c) > 1 and yuac_prompt(f"mkdir {c[1]}"):
+        if len(c) > 1:
             mkdir_cmd(c[1])
+        else:
+            print("Specify folder name 💀")
     elif c0 == "pass":
         change_pass()
     elif c0 == "user":
         switch_user()
     elif c0 == "reboot":
         if yuac_prompt("reboot"):
-            os.system("cls" if os.name == "nt" else "clear")
-            boot_screen()
+            choice = input("Delete all code/data and paste new OS? (y/N): ").strip().lower()
+            if choice == "y":
+                confirm = input("⚠️ Type 'CONFIRM' to delete EVERYTHING: ").strip()
+                if confirm == "CONFIRM":
+                    try: os.remove(SAVE_FILE)
+                    except: pass
+                    os.system("cls" if os.name == "nt" else "clear")
+                    print("All code/data wiped! Paste new OS now 💀")
+                    sys.exit()
+                else:
+                    print("Reboot aborted 💀")
+            else:
+                os.system("cls" if os.name == "nt" else "clear")
+                boot_screen()
     elif c0 == "command":
-        rest = " ".join(c[1:])
+        rest = cmd[len("command"):].strip()
         cmds = rest.split(";")
         for cm in cmds:
-            execute(cm)
+            execute(cm.strip())
     elif c0 == "wifi-scan":
         wifi_scan()
     elif c0 == "wifi-connect":
@@ -512,11 +580,19 @@ def execute(cmd):
         wifi_disconnect()
     elif c0 == "wifi-status":
         wifi_status()
+    elif c0 == "ethernet-list":
+        ethernet_list()
+    elif c0 == "ethernet-connect":
+        if yuac_prompt("ethernet-connect"):
+            ethernet_connect()
+    elif c0 == "ethernet-status":
+        ethernet_status()
+    elif c0 == "speed-test":
+        speed_test()
     elif c0 == "yuac":
         global YUAC_ENABLED
         YUAC_ENABLED = not YUAC_ENABLED
-        state = "enabled" if YUAC_ENABLED else "disabled"
-        print(f"YUAC is now {state} 💀")
+        print(f"YUAC {'enabled' if YUAC_ENABLED else 'disabled'} 💀")
     elif c0 == "saveos":
         save_os()
     elif c0 == "loados":
@@ -524,7 +600,7 @@ def execute(cmd):
     elif c0 == "activate":
         activate_os()
     elif c0 == "exit":
-        print(f"Shutting down {OS_NAME}...")
+        print("Shutting down Youmu DOS 💀")
         sys.exit()
     else:
         print("Unknown command bro 💀")
@@ -542,6 +618,9 @@ def main_loop():
 # ============================
 os.system("cls" if os.name == "nt" else "clear")
 boot_screen()
+load_os()
 login()
 main_loop()
+
+
 
