@@ -434,7 +434,7 @@ def rename_os():
 # ACTIVATION SYSTEM
 # ============================
 OS_ACTIVATED = False
-VALID_KEYS = ["YOUMU-25Y5-2025", "QWERTY-2025-YUUKA"]
+VALID_KEYS = ["YOUMU-25Y5-2025", "QWERTY-2025-YUUKA" "12345678910"]
 
 def activate_os():
     global OS_ACTIVATED
