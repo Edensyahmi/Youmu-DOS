@@ -1,4 +1,5 @@
-# Youmu-DOS
-My first DOS OS made in Python 
-Code in OS Code Branches
-Python is needed no command Prompt
+Requirement for ASCII Touhou Games
+
+Windows 10/11
+2+ Core 1.00 Ghz+ CPU
+iGPU or dGPU
